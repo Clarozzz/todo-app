@@ -3,28 +3,16 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import s from '../style';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
-
-const todos = [
-  { id: 1, title: 'Tarea 1', completed: 'Completado', description: 'Revisar y enviar el informe semanal', deadline: '2025-11-20' },
-  { id: 2, title: 'Tarea 2', completed: 'En proceso', description: 'Preparar presentación para el cliente', deadline: '2025-12-15' },
-  { id: 3, title: 'Tarea 3', completed: 'Pendiente', description: 'Actualizar la base de datos de usuarios', deadline: '2025-10-25' },
-  { id: 4, title: 'Tarea 4', completed: 'Completado', description: 'Responder correos pendientes', deadline: '2025-12-05' },
-  { id: 5, title: 'Tarea 5', completed: 'En proceso', description: 'Diseñar la interfaz de la nueva sección', deadline: '2026-01-10' },
-  { id: 6, title: 'Tarea 6', completed: 'Pendiente', description: 'Revisar bugs reportados por QA', deadline: '2025-11-30' },
-  { id: 7, title: 'Tarea 7', completed: 'Pendiente', description: 'Cancelar la reunión de planificación', deadline: '2025-10-20' },
-  { id: 8, title: 'Tarea 8', completed: 'En proceso', description: 'Actualizar documentación del proyecto', deadline: '2025-12-01' },
-  { id: 9, title: 'Tarea 9', completed: 'Pendiente', description: 'Configurar el servidor de prueba', deadline: '2026-01-25' },
-  { id: 10, title: 'Tarea 10', completed: 'Completado', description: 'Enviar reporte de ventas al gerente', deadline: '2025-11-10' },
-  { id: 11, title: 'Tarea 11', completed: 'En proceso', description: 'Probar nueva funcionalidad en staging', deadline: '2026-02-05' },
-  { id: 12, title: 'Tarea 12', completed: 'Pendiente', description: 'Preparar agenda para la reunión de equipo', deadline: '2025-12-18' },
-  { id: 13, title: 'Tarea 13', completed: 'Completado', description: 'Revisar y aprobar cambios en el repositorio', deadline: '2025-11-25' },
-  { id: 14, title: 'Tarea 14', completed: 'En proceso', description: 'Redactar borrador de la propuesta del cliente', deadline: '2026-01-15' },
-  { id: 15, title: 'Tarea 15', completed: 'Pendiente', description: 'Organizar archivos y documentos del proyecto', deadline: '2025-10-28' },
-];
+import { useSQLiteContext } from 'expo-sqlite';
+import { Todo } from '../types/object-types';
+import { getTodos } from '../database/queries';
+import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
+import Feather from '@expo/vector-icons/Feather';
 
 const getBoxStyle: Record<string, object> = {
   'Completado': s.todoCompleted,
@@ -33,20 +21,61 @@ const getBoxStyle: Record<string, object> = {
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+LocaleConfig.locales['es'] = {
+  monthNames: [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ],
+  monthNamesShort: [
+    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+  ],
+  dayNames: [
+    'Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
+  ],
+  dayNamesShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+  today: 'Hoy'
+};
+LocaleConfig.defaultLocale = 'es';
+
 export default function Home() {
-  const [modalVisible, setModalVisible] = useState(false);
+  const [newTaskModalVisible, setNewTaskModalVisible] = useState(false);
+  const [dateModalVisible, setDateModalVisible] = useState(false);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [date, setDate] = useState(getLocalDateString());
+
   const descriptionRef = useRef<TextInput>(null);
   const dateRef = useRef<TextInput>(null);
   const navigation = useNavigation<HomeScreenNavigationProp>();
+
+  const db = useSQLiteContext();
+
+  function getLocalDateString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  useDrizzleStudio(db);
+
+  useEffect(() => {
+    async function fetchTodos() {
+      const result = await getTodos(db);
+      setTodos(result);
+    }
+    fetchTodos();
+  }, [db]);
 
   return (
     <SafeAreaView style={s.page}>
       <Modal
         animationType="fade"
-        visible={modalVisible}
+        visible={newTaskModalVisible}
         backdropColor={'rgba(0, 0, 0, 0)'}
         onRequestClose={() => {
-          setModalVisible(!modalVisible);
+          setNewTaskModalVisible(!newTaskModalVisible);
         }}
       >
         <View style={s.modal}>
@@ -74,15 +103,16 @@ export default function Home() {
               <Text style={s.inputText}>
                 Fecha
               </Text>
-              <TextInput
-                ref={dateRef}
-                style={s.modalInput}
-                maxLength={30}
-                returnKeyType='next'
-                placeholder='Escribe un titulo...'
-                onSubmitEditing={() => descriptionRef.current?.focus()}
-                submitBehavior='submit'
-              />
+              <TouchableHighlight
+                underlayColor={'rgba(226, 226, 226, 1)'}
+                style={s.datePickerModalButton} onPress={() => setDateModalVisible(true)}>
+                <View style={s.datePickerModalButtonContent}>
+                  <Text style={s.datePickerModalOpenButtonText}>
+                    {date}
+                  </Text>
+                  <Feather name="calendar" size={24} color="black" />
+                </View>
+              </TouchableHighlight>
             </View>
 
             <View style={s.inputLabel}>
@@ -106,7 +136,7 @@ export default function Home() {
 
               <TouchableHighlight
                 underlayColor={'#f0efefff'}
-                style={s.modalCloseButton} onPress={() => setModalVisible(!modalVisible)}>
+                style={s.modalCloseButton} onPress={() => setNewTaskModalVisible(!newTaskModalVisible)}>
                 <Text style={{ color: 'black' }}>
                   Cancelar
                 </Text>
@@ -125,9 +155,55 @@ export default function Home() {
         </View>
       </Modal>
 
+      <Modal
+        animationType="fade"
+        visible={dateModalVisible}
+        backdropColor={'rgba(0, 0, 0, 0)'}
+        onRequestClose={() => {
+          setDateModalVisible(!dateModalVisible);
+        }}
+      >
+        <View style={s.datePickerModal}>
+          <View style={s.datePickerModalView}>
+            <Calendar
+              theme={{
+                todayTextColor: 'white',
+                arrowColor: '#000000ff',
+                todayBackgroundColor: '#a8a8a8ff',
+              }}
+              onDayPress={(day) => setDate(day.dateString)}
+              markedDates={{
+                [date]: { selected: true, selectedColor: '#000000ff' }
+              }}
+            />
+
+            <View style={s.modalButtons}>
+
+              <TouchableHighlight
+                underlayColor={'#f0efefff'}
+                style={s.modalCloseButton} onPress={() => { setDateModalVisible(!dateModalVisible); setDate(getLocalDateString()) }}>
+                <Text style={{ color: 'black' }}>
+                  Cancelar
+                </Text>
+              </TouchableHighlight>
+
+              <TouchableHighlight
+                underlayColor={'rgba(42, 42, 42, 0.9)'}
+                style={s.modalAddButton} onPress={() => setDateModalVisible(!dateModalVisible)}>
+                <Text style={{ color: 'white' }}>
+                  Aceptar
+                </Text>
+              </TouchableHighlight>
+
+            </View>
+
+          </View>
+        </View>
+      </Modal>
+
       <TouchableHighlight
         underlayColor={'rgba(42, 42, 42, 0.9)'}
-        style={s.modalOpenButton} onPress={() => setModalVisible(true)}>
+        style={s.modalOpenButton} onPress={() => setNewTaskModalVisible(true)}>
         <View style={s.modalOpenButtonContent}>
           <AntDesign name="plus" size={20} color="white" />
           <Text style={s.modalOpenButtonText}>

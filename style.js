@@ -97,6 +97,20 @@ export default StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
   },
+  datePickerModal: {
+    flex: 1,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  datePickerModalView: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 25,
+    flex: 1,
+    marginHorizontal: 24,
+    marginBottom: 10
+  },
   modalView: {
     backgroundColor: 'white',
     borderRadius: 15,
@@ -142,5 +156,19 @@ export default StyleSheet.create({
   todoDeadline: {
     color: '#808080ff',
     fontSize: 11,
+  },
+  datePickerModalButton: {
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f0efefff',
+  },
+  datePickerModalButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  datePickerModalOpenButtonText: {
+    color: 'black',
+    fontSize: 15,
   }
 });

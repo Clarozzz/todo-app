@@ -12,7 +12,9 @@ export default function TodoInfo() {
   return (
     <SafeAreaView style={s.page}>
       <View style={s.container}>
-        <Text>{params.title}</Text>
+        <Text>
+          {`ID: ${params.id}\nTitle: ${params.title}\nCompleted: ${params.completed}\nDescription: ${params.description}\nDue Date: ${params.due_date}`}
+        </Text>
       </View>
     </SafeAreaView>
   )

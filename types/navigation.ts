@@ -5,6 +5,6 @@ export type RootStackParamList = {
     title: string;
     completed: string;
     description: string;
-    deadline: string;
+    due_date: string;
    };
 };
