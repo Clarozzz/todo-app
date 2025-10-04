@@ -145,13 +145,13 @@ export default StyleSheet.create({
     backgroundColor: '#f0efefff',
     borderRadius: 8,
     paddingHorizontal: 16,
-    marginTop: 4,
   },
   inputLabel: {
     marginTop: 12,
   },
   inputText: {
     fontSize: 16,
+    marginBottom: 4,
   },
   todoDeadline: {
     color: '#808080ff',
@@ -165,10 +165,20 @@ export default StyleSheet.create({
   },
   datePickerModalButtonContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'center'
   },
   datePickerModalOpenButtonText: {
     color: 'black',
     fontSize: 15,
+  },
+  errorText: {
+    color: 'red',
+    marginTop: 4,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });

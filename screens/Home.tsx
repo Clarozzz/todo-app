@@ -1,18 +1,21 @@
-import { Keyboard, Modal, Pressable, ScrollView, Text, TextInput, TextStyle, TouchableHighlight, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, Modal, Pressable, ScrollView, Text, TextInput, TextStyle, TouchableHighlight, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'
 import s from '../style';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Todo } from '../types/object-types';
-import { getTodos } from '../database/queries';
+import { addTodo, getTodos } from '../database/queries';
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import Feather from '@expo/vector-icons/Feather';
+import * as yup from 'yup';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { Controller, useForm } from 'react-hook-form';
 
 const getBoxStyle: Record<string, object> = {
   'Completado': s.todoCompleted,
@@ -38,13 +41,24 @@ LocaleConfig.locales['es'] = {
 };
 LocaleConfig.defaultLocale = 'es';
 
+const schema = yup.object({
+  title: yup.string()
+    .required(),
+  due_date: yup.string()
+    .required(),
+  description: yup.string()
+    .notRequired()
+    .max(140, 'La descripción no puede tener más de 140 caracteres'),
+});
+
+
 export default function Home() {
   const [newTaskModalVisible, setNewTaskModalVisible] = useState(false);
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [date, setDate] = useState(getLocalDateString());
+  const [loading, setLoading] = useState(false);
 
-  const descriptionRef = useRef<TextInput>(null);
   const dateRef = useRef<TextInput>(null);
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
@@ -60,13 +74,45 @@ export default function Home() {
 
   useDrizzleStudio(db);
 
-  useEffect(() => {
-    async function fetchTodos() {
-      const result = await getTodos(db);
-      setTodos(result);
-    }
-    fetchTodos();
+  const fetchTodos = useCallback(async () => {
+    setLoading(true);
+    const result = await getTodos(db);
+    setTodos(result);
+    setLoading(false);
   }, [db]);
+
+  useEffect(() => {
+    fetchTodos();
+  }, [fetchTodos]);
+
+  const { control, handleSubmit, formState: { errors }, reset, clearErrors } = useForm({
+    resolver: yupResolver(schema)
+  });
+
+  async function onSubmit(data: { title: string; due_date: string; description?: string | null }) {
+    try {
+      setLoading(true);
+      await addTodo(db, data.title, data.due_date, data.description ?? '')
+      fetchTodos();
+      closeNewTaskModal();
+      setLoading(false);
+    } catch (error) {
+      console.error('Error al guardar la tarea:', error);
+    }
+  }
+
+  function closeNewTaskModal() {
+    setNewTaskModalVisible(false);
+    setDate(getLocalDateString())
+    reset();
+    clearErrors();
+  }
+
+  function wrongDate() {
+    Alert.alert('Error', 'La fecha no puede ser anterior a la actual.', [{ text: 'Aceptar'}])
+  }
+
+  if (loading) return <ActivityIndicator style={s.loading} size="large" />;
 
   return (
     <SafeAreaView style={s.page}>
@@ -89,14 +135,23 @@ export default function Home() {
               <Text style={s.inputText}>
                 Título
               </Text>
-              <TextInput
-                style={s.modalInput}
-                maxLength={30}
-                returnKeyType='next'
-                placeholder='Escribe un titulo...'
-                onSubmitEditing={() => dateRef.current?.focus()}
-                submitBehavior='submit'
+              <Controller
+                control={control}
+                name="title"
+                defaultValue=""
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={s.modalInput}
+                    maxLength={30}
+                    returnKeyType="next"
+                    placeholder="Escribe un título..."
+                    value={value ?? ''}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                  />
+                )}
               />
+              {errors.title && <Text style={s.errorText}>Este campo es obligatorio</Text>}
             </View>
 
             <View style={s.inputLabel}>
@@ -107,36 +162,58 @@ export default function Home() {
                 underlayColor={'rgba(226, 226, 226, 1)'}
                 style={s.datePickerModalButton} onPress={() => setDateModalVisible(true)}>
                 <View style={s.datePickerModalButtonContent}>
+                  <Feather name="calendar" size={24} color="black" />
                   <Text style={s.datePickerModalOpenButtonText}>
                     {date}
                   </Text>
-                  <Feather name="calendar" size={24} color="black" />
                 </View>
               </TouchableHighlight>
             </View>
+
+            <Controller
+              control={control}
+              name="due_date"
+              defaultValue={date}
+              render={({ field }) => (
+                <TextInput
+                  ref={dateRef}
+                  style={{ display: 'none' }}
+                  value={date}
+                  onChangeText={field.onChange}
+                />
+              )}
+            />
 
             <View style={s.inputLabel}>
               <Text style={s.inputText}>
                 Descripción
               </Text>
-              <TextInput
-                ref={descriptionRef}
-                style={[s.modalInput, { height: 75, textAlignVertical: 'top' }]}
-                multiline={true}
-                numberOfLines={3}
-                maxLength={140}
-                returnKeyType='done'
-                placeholder='Describe la tarea...'
-                submitBehavior='submit'
-                onSubmitEditing={() => Keyboard.dismiss()}
+              <Controller
+                control={control}
+                name="description"
+                render={({ field }) => (
+                  <TextInput
+                    style={[s.modalInput, { height: 79, textAlignVertical: 'top' }]}
+                    multiline={true}
+                    numberOfLines={3}
+                    maxLength={140}
+                    returnKeyType='done'
+                    placeholder='Describe la tarea...'
+                    submitBehavior='submit'
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                    value={field.value ?? ''}
+                    onChangeText={field.onChange}
+                  />
+                )}
               />
+              {errors.description && <Text style={s.errorText}>{errors.description.message}</Text>}
             </View>
 
             <View style={s.modalButtons}>
 
               <TouchableHighlight
                 underlayColor={'#f0efefff'}
-                style={s.modalCloseButton} onPress={() => setNewTaskModalVisible(!newTaskModalVisible)}>
+                style={s.modalCloseButton} onPress={closeNewTaskModal}>
                 <Text style={{ color: 'black' }}>
                   Cancelar
                 </Text>
@@ -144,7 +221,7 @@ export default function Home() {
 
               <TouchableHighlight
                 underlayColor={'rgba(42, 42, 42, 0.9)'}
-                style={s.modalAddButton} onPress={() => alert('You pressed a button.')}>
+                style={s.modalAddButton} onPress={handleSubmit(onSubmit)}>
                 <Text style={{ color: 'white' }}>
                   Agregar
                 </Text>
@@ -171,7 +248,13 @@ export default function Home() {
                 arrowColor: '#000000ff',
                 todayBackgroundColor: '#a8a8a8ff',
               }}
-              onDayPress={(day) => setDate(day.dateString)}
+              onDayPress={day => {
+                if (day.dateString < getLocalDateString()) {
+                  wrongDate();
+                  return;
+                }
+                setDate(day.dateString);
+              }}
               markedDates={{
                 [date]: { selected: true, selectedColor: '#000000ff' }
               }}

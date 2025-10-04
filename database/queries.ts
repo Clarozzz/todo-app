@@ -16,3 +16,12 @@ export async function getTodos(db: SQLiteDatabase): Promise<Todo[]> {
 
   return result as Todo[];
 }
+
+export async function addTodo(db: SQLiteDatabase, title: string, due_date: string, description: string) {
+  await db.runAsync(
+    `INSERT INTO todos
+      (title, due_date, description)
+      VALUES (?, ?, ?)`,
+    title, due_date, description
+  )
+}
