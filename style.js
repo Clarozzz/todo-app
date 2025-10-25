@@ -22,6 +22,14 @@ export default StyleSheet.create({
     fontSize: 20,
     fontWeight: '500',
   },
+  title5: {
+    fontSize: 18,
+    fontWeight: '450',
+    color: 'rgba(85, 85, 85, 1)'
+  },
+  title6: {
+    color: 'rgba(105, 105, 105, 1)'
+  },
   todoContainer: {
     marginTop: 16,
     gap: 12,
@@ -141,6 +149,12 @@ export default StyleSheet.create({
     marginTop: 25,
     height: 45,
   },
+  todoInfoButtons: {
+    flexDirection: 'row',
+    padding: 10,
+    height: 70,
+    gap: 12,
+  },
   modalInput: {
     backgroundColor: '#f0efefff',
     borderRadius: 8,
@@ -155,7 +169,7 @@ export default StyleSheet.create({
   },
   todoDeadline: {
     color: '#808080ff',
-    fontSize: 11,
+    fontSize: 15,
   },
   datePickerModalButton: {
     borderRadius: 8,
@@ -180,5 +194,74 @@ export default StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  boldText: {
+    fontWeight: 500
+  },
+  title4: {
+    fontSize: 30,
+    fontWeight: 600
+  },
+  todoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  todoState: {
+    padding: 8,
+    borderRadius: 10
+  },
+  infoBox: {
+    borderRadius: 15,
+    padding: 15,
+  },
+  dateBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gapper: {
+    marginBottom: 25
+  },
+  dateBoxIcon: {
+    backgroundColor: '#eeeeeeff',
+    padding: 15,
+    borderRadius: 10,
+    marginRight: 20
+  },
+  dateBoxText: {
+    gap: 3
+  },
+  separetion: {
+    flex: 1,
+    alignItems: ''
+  },
+  todoOptions: {
+    gap: 15,
+    marginTop: 20
+  },
+  deleteButton: {
+    width: '100%',
+    backgroundColor: '#de0029ff',
+    padding: 13,
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  editButton: {
+    width: '100%',
+    backgroundColor: 'black',
+    padding: 13,
+    borderRadius: 8,
+    alignItems: 'center'
+
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  filterOptionButton: {
+    padding: 10,
+    borderRadius: 8,
   }
 });

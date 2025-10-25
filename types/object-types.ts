@@ -4,4 +4,5 @@ export type Todo = {
   completed: string;
   description: string;
   due_date: string;
+  created_at: string
 }

@@ -16,11 +16,8 @@ import Feather from '@expo/vector-icons/Feather';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Controller, useForm } from 'react-hook-form';
-
-const getBoxStyle: Record<string, object> = {
-  'Completado': s.todoCompleted,
-  'En proceso': s.todoInProgress,
-}
+import { getBoxStyle, getLocalDateString } from '../functions/functions';
+import TodoOptions from '../components/TodoOptions';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -58,46 +55,80 @@ export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [date, setDate] = useState(getLocalDateString());
   const [loading, setLoading] = useState(false);
+  const [optionsModal, setOptionsModal] = useState(false);
+  const [todoId, setTodoId] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'Todos' | 'En proceso' | 'Pendiente' | 'Completado'>('Todos');
+  const [filteredTodos, setFilteredTodos] = useState<Todo[]>([]);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'prioritario' | 'no_prioritario'>('prioritario');
+
+
 
   const dateRef = useRef<TextInput>(null);
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
   const db = useSQLiteContext();
 
-  function getLocalDateString() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
   useDrizzleStudio(db);
 
   const fetchTodos = useCallback(async () => {
     setLoading(true);
-    const result = await getTodos(db);
-    setTodos(result);
-    setLoading(false);
+    try {
+      const result = await getTodos(db);
+      setTodos(result);
+    } catch (error) {
+      console.error("Error al obtener tareas:", error);
+      Alert.alert("Error", "No se pudieron cargar las tareas");
+    } finally {
+      setLoading(false);
+    }
   }, [db]);
 
   useEffect(() => {
     fetchTodos();
   }, [fetchTodos]);
 
+  useEffect(() => {
+    let tempTodos = [...todos];
+
+    // Filtrado por estado
+    if (filterStatus !== 'Todos') {
+      tempTodos = tempTodos.filter(todo => todo.completed === filterStatus);
+    }
+
+    // Búsqueda por título
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      tempTodos = tempTodos.filter(todo => todo.title.toLowerCase().includes(q));
+    }
+
+    // Orden por fecha
+    tempTodos.sort((a, b) => {
+      const dateA = new Date(a.due_date).getTime();
+      const dateB = new Date(b.due_date).getTime();
+      return sortOrder === 'prioritario' ? dateA - dateB : dateB - dateA;
+    });
+
+    setFilteredTodos(tempTodos);
+  }, [todos, searchQuery, filterStatus, sortOrder]);
+
+
+
   const { control, handleSubmit, formState: { errors }, reset, clearErrors } = useForm({
     resolver: yupResolver(schema)
   });
 
-  async function onSubmit(data: { title: string; due_date: string; description?: string | null }) {
+  async function onSubmit(data: { title: string; description?: string | null }) {
+    setLoading(true);
     try {
-      setLoading(true);
-      await addTodo(db, data.title, data.due_date, data.description ?? '')
+      await addTodo(db, data.title, date, data.description ?? '', getLocalDateString())
       fetchTodos();
       closeNewTaskModal();
-      setLoading(false);
     } catch (error) {
       console.error('Error al guardar la tarea:', error);
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -109,10 +140,10 @@ export default function Home() {
   }
 
   function wrongDate() {
-    Alert.alert('Error', 'La fecha no puede ser anterior a la actual.', [{ text: 'Aceptar'}])
+    Alert.alert('Error', 'La fecha no puede ser anterior a la actual.', [{ text: 'Aceptar' }])
   }
 
-  if (loading) return <ActivityIndicator style={s.loading} size="large" />;
+  if (loading) return <ActivityIndicator style={s.loading} size="large" />
 
   return (
     <SafeAreaView style={s.page}>
@@ -284,6 +315,94 @@ export default function Home() {
         </View>
       </Modal>
 
+      <Modal
+        animationType="fade"
+        visible={filterModalVisible}
+        backdropColor={'rgba(0, 0, 0, 0)'}
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={s.modal}>
+          <View style={s.modalView}>
+            <View style={s.modalHeader}>
+              <Text style={s.title1}>Filtrar tareas</Text>
+              <Pressable onPress={() => setFilterModalVisible(false)}>
+                <AntDesign name="close" size={24} color="black" />
+              </Pressable>
+            </View>
+
+            <Text style={[s.title6, { marginVertical: 10 }]}>Estado</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+              {['Todos', 'En proceso', 'Pendiente', 'Completado'].map(status => (
+                <TouchableHighlight
+                  key={status}
+                  style={[
+                    s.filterOptionButton,
+                    filterStatus === status && { backgroundColor: '#484848ff' }
+                  ]}
+                  underlayColor="#ddd"
+                  onPress={() => setFilterStatus(status as typeof filterStatus)}
+                >
+                  <Text style={{ color: filterStatus === status ? 'white' : 'black' }}>
+                    {status}
+                  </Text>
+                </TouchableHighlight>
+              ))}
+            </View>
+
+            <Text style={[s.title6, { marginVertical: 10 }]}>Ordenar por fecha</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+              {[
+                { label: 'Prioritario', value: 'prioritario' },
+                { label: 'Menos prioritario', value: 'no_prioritario' }
+              ].map(order => (
+                <TouchableHighlight
+                  key={order.value}
+                  style={[
+                    s.filterOptionButton,
+                    sortOrder === order.value && { backgroundColor: '#484848ff' }
+                  ]}
+                  underlayColor="#ddd"
+                  onPress={() => setSortOrder(order.value as 'prioritario' | 'no_prioritario')}
+                >
+                  <Text style={{ color: sortOrder === order.value ? 'white' : 'black' }}>
+                    {order.label}
+                  </Text>
+                </TouchableHighlight>
+              ))}
+            </View>
+
+            <View style={s.modalButtons}>
+              <TouchableHighlight
+                underlayColor={'#f0efefff'}
+                style={s.modalCloseButton}
+                onPress={() => {
+                  setFilterModalVisible(false);
+                  setFilterStatus('Todos');
+                  setSortOrder('prioritario');
+                }}
+              >
+                <Text style={{ color: 'black' }}>Limpiar</Text>
+              </TouchableHighlight>
+
+              <TouchableHighlight
+                underlayColor={'rgba(42, 42, 42, 0.9)'}
+                style={s.modalAddButton}
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={{ color: 'white' }}>Aplicar</Text>
+              </TouchableHighlight>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <TodoOptions
+        isOpen={optionsModal}
+        onClose={() => setOptionsModal(false)}
+        id={todoId}
+        onDeleted={fetchTodos}
+      />
+
       <TouchableHighlight
         underlayColor={'rgba(42, 42, 42, 0.9)'}
         style={s.modalOpenButton} onPress={() => setNewTaskModalVisible(true)}>
@@ -304,47 +423,40 @@ export default function Home() {
           <TextInput
             style={s.input}
             placeholder='Buscar tarea...'
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
-          <Pressable style={s.filterButton} onPress={() => alert('You pressed a button.')}>
+          <Pressable style={s.filterButton} onPress={() => setFilterModalVisible(true)}>
             <Ionicons name="filter-sharp" size={26} color="black" />
           </Pressable>
         </View>
 
         <View style={s.todoContainer}>
-          {
-            todos.map(todo => (
-
-              <Pressable key={todo.id} onPress={() => navigation.navigate('Todo', todo)}>
-                <View style={[s.todoBox, getBoxStyle[todo.completed] || s.todoDefault]}>
-
-                  <View>
-                    <View style={s.todoTextIcon}>
-                      <Text style={s.title2}>
-                        {todo.title}
-                      </Text>
-
-                      {todo.completed === 'Completado'
-                        ? (<Ionicons name="checkmark-circle" size={35} color={(s.todoCompleted as TextStyle).color} />)
-                        : (
-                          <View>
-                            <Text style={getBoxStyle[todo.completed]}>
-                              {todo.completed === 'Completado' ? null : todo.completed}
-                            </Text>
-                          </View>
-                        )}
-                    </View>
-                  </View>
-
-                  <View style={s.todoDescription}>
-                    <Text numberOfLines={1} style={s.todoDescriptionText}>
-                      {todo.description}
-                    </Text>
-                  </View>
+          {filteredTodos.map(todo => (
+            <Pressable
+              key={todo.id}
+              onPress={() => navigation.navigate('Todo', todo)}
+              onLongPress={() => { setOptionsModal(true); setTodoId(todo.id) }}
+            >
+              <View style={[s.todoBox, getBoxStyle[todo.completed] || s.todoDefault]}>
+                <View style={s.todoTextIcon}>
+                  <Text style={s.title2}>{todo.title}</Text>
+                  {todo.completed === 'Completado' ? (
+                    <Ionicons name="checkmark-circle" size={35} color={(s.todoCompleted as TextStyle).color} />
+                  ) : (
+                    <Text style={getBoxStyle[todo.completed]}>{todo.completed}</Text>
+                  )}
                 </View>
-              </Pressable>
-            ))
-          }
+                <View style={s.todoDescription}>
+                  <Text numberOfLines={1} style={s.todoDescriptionText}>
+                    {todo.description}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          ))}
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
