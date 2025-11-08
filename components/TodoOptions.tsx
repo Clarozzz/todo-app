@@ -7,6 +7,7 @@ import { deleteTodo } from '../database/queries';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import EditTodoModal from './editTodoModal';
 
 type TodoOptionsProps = {
   isOpen: boolean;
@@ -20,6 +21,7 @@ type TodoScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'T
 export default function TodoOptions({ isOpen, onClose, id, onDeleted }: TodoOptionsProps) {
   const [loading, setLoading] = useState(false)
   const [pressing, setPressing] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
 
   const navigation = useNavigation<TodoScreenNavigationProp>();
@@ -122,12 +124,20 @@ export default function TodoOptions({ isOpen, onClose, id, onDeleted }: TodoOpti
 
             <Pressable
               style={s.editButton}
-              onPress={onClose}
+              onPress={() => setEditModalVisible(true)}
             >
-              <Text style={{ color: 'white' }}>
-                Editar
-              </Text>
+              <Text style={{ color: 'white' }}>Editar</Text>
             </Pressable>
+
+            <EditTodoModal
+              visible={editModalVisible}
+              onClose={() => setEditModalVisible(false)}
+              todoId={id}
+              onUpdated={() => {
+                onDeleted?.()
+                onClose()
+              }}
+            />
           </View>
         </View>
       </View>

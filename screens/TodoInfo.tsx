@@ -9,6 +9,9 @@ import { Shadow } from 'react-native-shadow-2';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import TodoOptions from '../components/TodoOptions';
 import { useState } from 'react';
+import { Todo } from '../types/object-types';
+import { getTodoById } from '../database/queries';
+import { useSQLiteContext } from 'expo-sqlite';
 
 type TodoRouteProp = RouteProp<RootStackParamList, 'Todo'>;
 type TodoScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Todo'>
@@ -20,6 +23,20 @@ export default function TodoInfo() {
   const [optionsModal, setOptionsModal] = useState(false);
   const { params } = useRoute<TodoRouteProp>();
   const navigation = useNavigation<TodoScreenNavigationProp>();
+  const [todo, setTodo] = useState<Todo>(params);
+
+  const db = useSQLiteContext();
+
+  async function fetchTodo() {
+  try {
+    const updatedTodo = await getTodoById(db, params.id);
+    if (updatedTodo) {
+      setTodo(updatedTodo as Todo);
+    }
+  } catch (error) {
+    console.error('Error al refrescar todo:', error);
+  }
+}
 
   return (
     <SafeAreaView style={[s.page, { flex: 1 }]}>
@@ -27,24 +44,25 @@ export default function TodoInfo() {
       <TodoOptions
         isOpen={optionsModal}
         onClose={() => setOptionsModal(false)}
-        id={params.id}
+        id={todo.id}
+        onDeleted={() => fetchTodo()}
       />
 
       <ScrollView style={s.container}>
         <View style={[s.todoHeader, s.gapper]}>
           <View style={{ flexShrink: 1 }}>
-            <Text style={s.title4}>{params.title}</Text>
-            <Text style={s.todoDeadline}>ID: {params.id}</Text>
+            <Text style={s.title4}>{todo.title}</Text>
+            <Text style={s.todoDeadline}>ID: {todo.id}</Text>
           </View>
-          <Text style={[s.todoState, s.todoDefault, getBoxStyle[params.completed]]}>
-            {params.completed}
+          <Text style={[s.todoState, s.todoDefault, getBoxStyle[todo.completed]]}>
+            {todo.completed}
           </Text>
         </View>
 
         <Shadow style={s.gapper} distance={shadowDistance} stretch>
           <View style={s.infoBox}>
             <Text style={s.title5}>Descripción</Text>
-            <Text style={s.title3}>{params.description}</Text>
+            <Text style={s.title3}>{todo.description}</Text>
           </View>
         </Shadow>
 
@@ -58,10 +76,10 @@ export default function TodoInfo() {
               <Text
                 style={[
                   s.title3,
-                  getLocalDateString() >= params.due_date ? { color: 'red' } : null,
+                  getLocalDateString() >= todo.due_date ? { color: 'red' } : null,
                 ]}
               >
-                {params.due_date}
+                {todo.due_date}
               </Text>
             </View>
           </View>
@@ -74,7 +92,7 @@ export default function TodoInfo() {
             </View>
             <View style={s.dateBoxText}>
               <Text style={s.title5}>Creada el:</Text>
-              <Text style={s.title3}>{params.created_at}</Text>
+              <Text style={s.title3}>{todo.created_at}</Text>
             </View>
           </View>
         </Shadow>

@@ -73,6 +73,7 @@ export default StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     flex: 8,
+    color: 'black',
   },
   filterButton: {
     marginLeft: 8,
@@ -159,6 +160,7 @@ export default StyleSheet.create({
     backgroundColor: '#f0efefff',
     borderRadius: 8,
     paddingHorizontal: 16,
+    color: 'black',
   },
   inputLabel: {
     marginTop: 12,

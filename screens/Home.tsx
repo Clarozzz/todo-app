@@ -176,6 +176,7 @@ export default function Home() {
                     maxLength={30}
                     returnKeyType="next"
                     placeholder="Escribe un título..."
+                    placeholderTextColor="#767676ff"
                     value={value ?? ''}
                     onChangeText={onChange}
                     onBlur={onBlur}
@@ -230,6 +231,7 @@ export default function Home() {
                     maxLength={140}
                     returnKeyType='done'
                     placeholder='Describe la tarea...'
+                    placeholderTextColor="#767676ff"
                     submitBehavior='submit'
                     onSubmitEditing={() => Keyboard.dismiss()}
                     value={field.value ?? ''}
@@ -423,6 +425,7 @@ export default function Home() {
           <TextInput
             style={s.input}
             placeholder='Buscar tarea...'
+            placeholderTextColor="#767676ff"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />

@@ -36,3 +36,25 @@ export async function deleteTodo(db: SQLiteDatabase, id: number) {
     {$id: id}
   )
 }
+
+export async function updateTodoById(db: SQLiteDatabase, id: number, title: string, description: string, due_date: string) {
+  await db.runAsync(
+    `UPDATE todos
+     SET title = $title,
+         description = $description,
+         due_date = $due_date
+     WHERE id = $id
+    `,
+    {
+      $title: title,
+      $description: description,
+      $due_date: due_date,
+      $id: id,
+    }
+  );
+}
+
+export async function getTodoById(db: SQLiteDatabase, id: number) {
+  const result = await db.getFirstAsync('SELECT * FROM todos WHERE id = ?', [id]);
+  return result;
+}
