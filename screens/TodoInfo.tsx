@@ -3,15 +3,16 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import s from '../style'
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
-import { getBoxStyle, getLocalDateString } from '../functions/functions';
+import { getBoxStyle, getLocalDateString, statusOptions } from '../utils/utils';
 import { Feather } from '@expo/vector-icons';
 import { Shadow } from 'react-native-shadow-2';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import TodoOptions from '../components/TodoOptions';
 import { useState } from 'react';
 import { Todo } from '../types/object-types';
-import { getTodoById } from '../database/queries';
+import { getTodoById, updateTodoStatus } from '../database/queries';
 import { useSQLiteContext } from 'expo-sqlite';
+import { Dropdown } from 'react-native-element-dropdown';
 
 type TodoRouteProp = RouteProp<RootStackParamList, 'Todo'>;
 type TodoScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Todo'>
@@ -28,15 +29,25 @@ export default function TodoInfo() {
   const db = useSQLiteContext();
 
   async function fetchTodo() {
-  try {
-    const updatedTodo = await getTodoById(db, params.id);
-    if (updatedTodo) {
-      setTodo(updatedTodo as Todo);
+    try {
+      const updatedTodo = await getTodoById(db, params.id);
+      if (updatedTodo) {
+        setTodo(updatedTodo as Todo);
+      }
+    } catch (error) {
+      console.error('Error al refrescar todo:', error);
     }
-  } catch (error) {
-    console.error('Error al refrescar todo:', error);
   }
-}
+
+  async function handleStatusChange(item: { label: string, value: number }) {
+
+    try {
+      await updateTodoStatus(db, todo.id, item.value); 
+      await fetchTodo();
+    } catch (error) {
+      console.error('Error al actualizar estado:', error);
+    }
+  }
 
   return (
     <SafeAreaView style={[s.page, { flex: 1 }]}>
@@ -45,6 +56,7 @@ export default function TodoInfo() {
         isOpen={optionsModal}
         onClose={() => setOptionsModal(false)}
         id={todo.id}
+        todoTitle={todo.title}
         onDeleted={() => fetchTodo()}
       />
 
@@ -54,14 +66,26 @@ export default function TodoInfo() {
             <Text style={s.title4}>{todo.title}</Text>
             <Text style={s.todoDeadline}>ID: {todo.id}</Text>
           </View>
-          <Text style={[s.todoState, s.todoDefault, getBoxStyle[todo.completed]]}>
-            {todo.completed}
-          </Text>
+          <Dropdown
+            style={[
+              s.dropdown,
+              s.todoDefault,
+              getBoxStyle[todo.completed],
+            ]}
+            data={statusOptions}
+            labelField="label"
+            valueField="value"
+            placeholder={todo.completed}
+            value={todo.completed}
+            onChange={item => {
+              handleStatusChange(item);
+            }}
+          />
         </View>
 
         <Shadow style={s.gapper} distance={shadowDistance} stretch>
           <View style={s.infoBox}>
-            <Text style={s.title5}>Descripción</Text>
+            <Text style={s.title5}>Descripción:</Text>
             <Text style={s.title3}>{todo.description}</Text>
           </View>
         </Shadow>

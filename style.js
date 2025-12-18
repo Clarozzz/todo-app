@@ -33,7 +33,7 @@ export default StyleSheet.create({
   todoContainer: {
     marginTop: 16,
     gap: 12,
-    marginBottom: 40,
+    marginBottom: 40
   },
   todoBox: {
     padding: 16,
@@ -62,7 +62,7 @@ export default StyleSheet.create({
     marginTop: 8
   },
   todoDescriptionText: {
-    color: '#606060ff',
+    color: '#606060',
   },
   searchAndFilters: {
     marginTop: 10,
@@ -76,10 +76,12 @@ export default StyleSheet.create({
     color: 'black',
   },
   filterButton: {
-    marginLeft: 8,
+    marginLeft: 4,
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 8,
+    paddingEnd: 0
   },
   modalOpenButton: {
     position: 'absolute',
@@ -265,5 +267,27 @@ export default StyleSheet.create({
   filterOptionButton: {
     padding: 10,
     borderRadius: 8,
-  }
+  },
+  textRed: {
+    color: "#d50329ff"
+  },
+  exitButton: {
+    padding: 8
+  },
+  noTodos: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  noTodosText: {
+    color: "#a5a5a5",
+    fontSize: 18,
+    marginTop: 15
+  },
+  dropdown: {
+    height: 40,
+    width: 140,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+  },
 });

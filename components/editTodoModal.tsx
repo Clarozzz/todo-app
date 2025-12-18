@@ -16,7 +16,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useSQLiteContext } from 'expo-sqlite';
 import s from '../style';
-import { getLocalDateString } from '../functions/functions';
+import { getLocalDateString } from '../utils/utils';
 import { Calendar } from 'react-native-calendars';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { Todo } from '../types/object-types';
@@ -47,7 +47,6 @@ export default function EditTodoModal({ visible, onClose, todoId, onUpdated }: E
   });
 
   useEffect(() => {
-    // cada vez que cambie el todoId abrimos la tarea y seteamos valores
     const fetchTodo = async () => {
       if (!todoId) {
         setTodo(null);
@@ -61,12 +60,10 @@ export default function EditTodoModal({ visible, onClose, todoId, onUpdated }: E
         if (result) {
           setTodo(result);
           setDate(result.due_date ?? getLocalDateString());
-          // setear campos del formulario
           reset({
             title: result.title ?? '',
             description: result.description ?? '',
           });
-          // también setValue por si hace falta
           setValue('title', result.title ?? '');
           setValue('description', result.description ?? '');
         } else {
@@ -100,7 +97,6 @@ export default function EditTodoModal({ visible, onClose, todoId, onUpdated }: E
   };
 
   if (!visible) return null;
-  // show loading while fetching todo
   if (loadingTodo) {
     return (
       <Modal animationType="fade" visible={visible} onRequestClose={onClose} transparent>
@@ -132,7 +128,7 @@ export default function EditTodoModal({ visible, onClose, todoId, onUpdated }: E
         <View style={s.modalView}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={[s.title1, { marginBottom: 8 }]}>Editar tarea</Text>
-            <Pressable onPress={onClose}>
+            <Pressable style={s.exitButton} onPress={onClose}>
               <AntDesign name="close" size={24} color="black" />
             </Pressable>
           </View>
