@@ -12,3 +12,9 @@ export const getBoxStyle: Record<string, object> = {
   'Completado': s.todoCompleted,
   'En proceso': s.todoInProgress,
 }
+
+export const statusOptions = [
+  { label: 'Pendiente', value: 1 },
+  { label: 'En proceso', value: 2 },
+  { label: 'Completado', value: 3 },
+];

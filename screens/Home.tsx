@@ -16,8 +16,9 @@ import Feather from '@expo/vector-icons/Feather';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Controller, useForm } from 'react-hook-form';
-import { getBoxStyle, getLocalDateString } from '../functions/functions';
+import { getBoxStyle, getLocalDateString } from '../utils/utils';
 import TodoOptions from '../components/TodoOptions';
+import NoTodosMessage from '../components/NoTodosMessage';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -57,6 +58,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [optionsModal, setOptionsModal] = useState(false);
   const [todoId, setTodoId] = useState(0);
+  const [todoTitle, setTodoTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'En proceso' | 'Pendiente' | 'Completado'>('Todos');
   const [filteredTodos, setFilteredTodos] = useState<Todo[]>([]);
@@ -327,7 +329,7 @@ export default function Home() {
           <View style={s.modalView}>
             <View style={s.modalHeader}>
               <Text style={s.title1}>Filtrar tareas</Text>
-              <Pressable onPress={() => setFilterModalVisible(false)}>
+              <Pressable style={s.exitButton} onPress={() => setFilterModalVisible(false)}>
                 <AntDesign name="close" size={24} color="black" />
               </Pressable>
             </View>
@@ -402,6 +404,7 @@ export default function Home() {
         isOpen={optionsModal}
         onClose={() => setOptionsModal(false)}
         id={todoId}
+        todoTitle={todoTitle}
         onDeleted={fetchTodos}
       />
 
@@ -416,7 +419,7 @@ export default function Home() {
         </View>
       </TouchableHighlight>
 
-      <ScrollView style={s.container}>
+      <ScrollView style={s.container} contentContainerStyle={{ flexGrow: 1 }}>
         <Text style={s.title1}>
           Tus tareas
         </Text>
@@ -434,31 +437,38 @@ export default function Home() {
           </Pressable>
         </View>
 
-        <View style={s.todoContainer}>
-          {filteredTodos.map(todo => (
-            <Pressable
-              key={todo.id}
-              onPress={() => navigation.navigate('Todo', todo)}
-              onLongPress={() => { setOptionsModal(true); setTodoId(todo.id) }}
-            >
-              <View style={[s.todoBox, getBoxStyle[todo.completed] || s.todoDefault]}>
-                <View style={s.todoTextIcon}>
-                  <Text style={s.title2}>{todo.title}</Text>
-                  {todo.completed === 'Completado' ? (
-                    <Ionicons name="checkmark-circle" size={35} color={(s.todoCompleted as TextStyle).color} />
-                  ) : (
-                    <Text style={getBoxStyle[todo.completed]}>{todo.completed}</Text>
-                  )}
-                </View>
-                <View style={s.todoDescription}>
-                  <Text numberOfLines={1} style={s.todoDescriptionText}>
-                    {todo.description}
-                  </Text>
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+
+        {filteredTodos.length > 0 ? (
+          <View style={s.todoContainer}>
+            {
+              filteredTodos.map(todo => (
+                <Pressable
+                  key={todo.id}
+                  onPress={() => navigation.navigate('Todo', todo)}
+                  onLongPress={() => { setOptionsModal(true); setTodoId(todo.id); setTodoTitle(todo.title) }}
+                >
+                  <View style={[s.todoBox, getBoxStyle[todo.completed] || s.todoDefault]}>
+                    <View style={s.todoTextIcon}>
+                      <Text style={s.title2}>{todo.title}</Text>
+                      {todo.completed === 'Completado' ? (
+                        <Ionicons name="checkmark-circle" size={35} color={(s.todoCompleted as TextStyle).color} />
+                      ) : (
+                        <Text style={getBoxStyle[todo.completed]}>{todo.completed}</Text>
+                      )}
+                    </View>
+                    <View style={s.todoDescription}>
+                      <Text numberOfLines={1} style={s.todoDescriptionText}>
+                        {todo.description}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              ))
+            }
+          </View>
+        ) :
+        <NoTodosMessage /> 
+      }
 
       </ScrollView>
     </SafeAreaView>

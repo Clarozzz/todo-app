@@ -54,7 +54,32 @@ export async function updateTodoById(db: SQLiteDatabase, id: number, title: stri
   );
 }
 
+export async function updateTodoStatus(db: SQLiteDatabase, id: number, status: number) {
+  await db.runAsync(
+    `UPDATE todos
+     SET completed = $status
+     WHERE id = $id
+    `,
+    {
+      $status: status,
+      $id: id
+    }
+  );
+}
+
 export async function getTodoById(db: SQLiteDatabase, id: number) {
-  const result = await db.getFirstAsync('SELECT * FROM todos WHERE id = ?', [id]);
+  const result = await db.getFirstAsync(
+    `SELECT 
+      todos.id,
+      todos.title,
+      status.name AS completed,
+      todos.description,
+      todos.due_date,
+      todos.created_at
+    FROM todos
+    JOIN status ON todos.completed = status.id
+    WHERE todos.id = ?`,
+     [id]
+  );
   return result;
 }

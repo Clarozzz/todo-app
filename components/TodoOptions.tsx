@@ -1,146 +1,95 @@
-import { ActivityIndicator, Modal, Pressable, Text, TouchableWithoutFeedback, View, Animated } from 'react-native'
+import { Modal, Pressable, Text, View } from 'react-native'
 import s from '../style'
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { deleteTodo } from '../database/queries';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import EditTodoModal from './editTodoModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 type TodoOptionsProps = {
   isOpen: boolean;
   onClose: () => void;
   id: number;
+  todoTitle: string;
   onDeleted?: () => void;
 };
 
 type TodoScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Todo'>
 
-export default function TodoOptions({ isOpen, onClose, id, onDeleted }: TodoOptionsProps) {
+export default function TodoOptions({ isOpen, onClose, id, todoTitle, onDeleted }: TodoOptionsProps) {
   const [loading, setLoading] = useState(false)
-  const [pressing, setPressing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const progress = useRef(new Animated.Value(0)).current;
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   const navigation = useNavigation<TodoScreenNavigationProp>();
   const db = useSQLiteContext();
 
   async function removeTodo() {
-    setLoading(true)
+    setLoading(true);
     try {
-      await deleteTodo(db, id)
-      onClose()
+      await deleteTodo(db, id);
+      setConfirmDeleteVisible(false);
+      onClose(); // Cierra el modal de opciones
       onDeleted?.();
       navigation.navigate('Home');
     } catch (error) {
-      console.error('No fue posible eliminar la tarea: ', error)
+      console.error('Error al eliminar:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  const handlePressIn = () => {
-    setPressing(true);
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: 1000, // duración del long press
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) {
-        removeTodo();
-        progress.setValue(0);
-        setPressing(false);
-      }
-    });
-  };
-
-  const handlePressOut = () => {
-    if (pressing) {
-      Animated.timing(progress, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
-      setPressing(false);
-    }
-  };
-
-  const width = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
-
   return (
     <Modal
-      animationType="fade"
-      backdropColor={'rgba(0, 0, 0, 0)'}
-      onRequestClose={onClose}
       visible={isOpen}
+      animationType="fade"
+      backdropColor={'rgba(0,0,0,0)'}
     >
       <View style={s.modal}>
         <View style={s.modalView}>
-
           <View style={s.modalHeader}>
-            <Text style={s.title1}>
-              ¿Qué deseas hacer?
-            </Text>
-            <Pressable onPress={onClose}>
+            <Text style={s.title1}>¿Qué deseas hacer?</Text>
+            <Pressable style={s.exitButton} onPress={onClose}>
               <AntDesign name="close" size={24} color="black" />
             </Pressable>
           </View>
 
-          <Text style={s.title6}>
-            *Mantén presionado para eliminar*
-          </Text>
-
           <View style={s.todoOptions}>
-            <TouchableWithoutFeedback
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              disabled={loading}
-            >
-              <View style={[s.deleteButton, { overflow: 'hidden', position: 'relative' }]}>
-                <Animated.View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    bottom: 0,
-                    width,
-                    backgroundColor: '#ff2e54aa', // color de llenado
-                  }}
-                />
-                {loading ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={{ color: 'white', fontWeight: '600' }}>
-                    Eliminar
-                  </Text>
-                )}
-              </View>
-            </TouchableWithoutFeedback>
-
             <Pressable
-              style={s.editButton}
-              onPress={() => setEditModalVisible(true)}
+              style={s.deleteButton}
+              onPress={() => setConfirmDeleteVisible(true)}
             >
-              <Text style={{ color: 'white' }}>Editar</Text>
+              <Text style={{ color: 'white', fontWeight: '600' }}>Eliminar</Text>
             </Pressable>
 
-            <EditTodoModal
-              visible={editModalVisible}
-              onClose={() => setEditModalVisible(false)}
-              todoId={id}
-              onUpdated={() => {
-                onDeleted?.()
-                onClose()
-              }}
-            />
+            <Pressable style={s.editButton} onPress={() => setEditModalVisible(true)}>
+              <Text style={{ color: 'white' }}>Editar</Text>
+            </Pressable>
           </View>
         </View>
       </View>
+
+      <ConfirmDeleteModal
+        visible={confirmDeleteVisible}
+        titleToMatch={todoTitle}
+        onClose={() => setConfirmDeleteVisible(false)}
+        onConfirm={removeTodo}
+        loading={loading}
+      />
+
+      <EditTodoModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        todoId={id}
+        onUpdated={() => {
+          onDeleted?.();
+          onClose();
+        }}
+      />
     </Modal>
-  )
+  );
 }
